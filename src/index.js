@@ -1,91 +1,72 @@
-// src/index.js — Applyseller Bot
-
-import { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } from './config.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import fs from 'fs';
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Collection,
-  REST,
-  Routes,
+// src/index.js
+import 'dotenv/config';
+import { 
+  Client, 
+  GatewayIntentBits, 
+  REST, 
+  Routes, 
+  SlashCommandBuilder, 
+  EmbedBuilder 
 } from 'discord.js';
+import { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } from './config.js';
 
-// resolve filename and dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// --- Initialize client ---
+// ----------------- CLIENT SETUP -----------------
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-  partials: [Partials.Channel],
+  intents: [GatewayIntentBits.Guilds]
 });
 
-// --- Load commands dynamically from ./commands ---
-const commands = new Collection();
-const commandJSON = [];
-const modalHandlers = new Map();
+// ----------------- /applyseller COMMAND -----------------
+const commands = [
+  new SlashCommandBuilder()
+    .setName('applyseller')
+    .setDescription('Apply to become a seller in Forgotten Traders!')
+].map(cmd => cmd.toJSON());
 
-const commandsDir = path.join(__dirname, 'commands');
-for (const file of fs.readdirSync(commandsDir)) {
-  if (!file.endsWith('.js')) continue;
-  const mod = await import(path.join(commandsDir, file));
-  if (mod?.data && mod?.execute) {
-    commands.set(mod.data.name, mod);
-    commandJSON.push(mod.data.toJSON());
-  }
-  if (mod?.modalId && typeof mod.handleModalSubmit === 'function') {
-    modalHandlers.set(mod.modalId, mod.handleModalSubmit);
-  }
-}
-
-// --- Register slash commands (guild-scoped for fast updates) ---
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
 
 async function registerCommands() {
   try {
+    console.log('🔄 Refreshing /applyseller command...');
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
-      { body: commandJSON }
+      { body: commands }
     );
-    console.log('✅ Successfully registered slash commands.');
+    console.log('✅ Successfully registered command.');
   } catch (err) {
-    console.error('❌ Failed to register commands:', err);
+    console.error('❌ Error registering commands:', err);
   }
 }
 
-// --- Client Ready ---
+// ----------------- BOT READY -----------------
 client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-  registerCommands();
 });
 
-// --- Handle interactions ---
-client.on('interactionCreate', async (interaction) => {
-  if (interaction.isChatInputCommand()) {
-    const command = commands.get(interaction.commandName);
-    if (!command) return;
-    try {
-      await command.execute(interaction);
-    } catch (err) {
-      console.error(err);
-      await interaction.reply({ content: '❌ Error executing command.', ephemeral: true });
-    }
-  }
+// ----------------- INTERACTION HANDLER -----------------
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.isModalSubmit()) {
-    const handler = modalHandlers.get(interaction.customId);
-    if (!handler) return;
-    try {
-      await handler(interaction);
-    } catch (err) {
-      console.error(err);
-      await interaction.reply({ content: '❌ Error handling modal.', ephemeral: true });
-    }
+  if (interaction.commandName === 'applyseller') {
+    const embed = new EmbedBuilder()
+      .setTitle('📜 APPLICATION FOR SELLER')
+      .setDescription(
+        "Hello! Welcome to **Forgotten Traders**!\n\n" +
+        "We strive to give customers the best experience and we’re honored you’d like to sell with us!\n\n" +
+        "Please answer the following:\n" +
+        "1️⃣ What are you looking to sell? (Bosses, kits, tames, all, etc)\n" +
+        "2️⃣ Have you sold in any shops before? If so, which ones?\n" +
+        "3️⃣ How often will you be active trading?\n" +
+        "4️⃣ We charge 25% of all OOG trades. Do you agree to this?"
+      )
+      .setColor(0x5865F2);
+
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 });
 
-// --- Log in ---
+// ----------------- LOGIN -----------------
+console.log("DEBUG - Token starts with:", DISCORD_TOKEN?.slice(0, 10));
 client.login(DISCORD_TOKEN);
+
+// Register commands when bot starts
+registerCommands();
