@@ -1,3 +1,4 @@
+// src/commands/applyseller.js
 import {
   SlashCommandBuilder,
   ModalBuilder,
@@ -7,7 +8,7 @@ import {
   EmbedBuilder,
   ChannelType,
 } from 'discord.js';
-import { SELLER_APPLY_CHANNEL_ID } from '../config.js';
+import { SELLER_APPLY_CHANNEL_ID, JOB_APP_GIF_URL } from '../config.js';
 
 export const data = new SlashCommandBuilder()
   .setName('applyseller')
@@ -22,25 +23,28 @@ export async function execute(interaction) {
 
   const q1 = new TextInputBuilder()
     .setCustomId('what_sell')
-    .setLabel('1) What do you want to sell?')
+    .setLabel('1) What do you want to sell?') // <= 45 chars
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
   const q2 = new TextInputBuilder()
     .setCustomId('prev_shops')
-    .setLabel('2) Sold in shops before? Which ones?')
+    .setLabel('2) Sold in shops before? Which ones?') // <= 45 chars
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
   const q3 = new TextInputBuilder()
     .setCustomId('activity')
-    .setLabel('3) How active will you be?')
+    .setLabel('3) How active will you be?') // <= 45 chars
     .setStyle(TextInputStyle.Short)
     .setRequired(true);
 
+  // ✅ FIXED: label <= 45; guidance moved to placeholder
   const q4 = new TextInputBuilder()
     .setCustomId('agree_tax')
-    .setLabel('4) We charge 25% OOG tax. Do you agree? (Yes/No)')
+    .setLabel('4) Agree to 25% OOG tax? (Yes/No)') // 33 chars
+    .setPlaceholder('Type Yes or No')
+    .setMaxLength(20)
     .setStyle(TextInputStyle.Short)
     .setRequired(true);
 
@@ -73,19 +77,22 @@ export async function handleModalSubmit(interaction) {
     )
     .setTimestamp();
 
+  // 🎞️ JOB APPLICATION GIF (env var, with fallback)
+  const gif = JOB_APP_GIF_URL?.trim() ||
+              'https://media.tenor.com/1gkOXtWqjQIAAAAC/job-application-hire-me.gif';
+  e.setImage(gif);
+
   try {
     let destChannel = null;
     if (SELLER_APPLY_CHANNEL_ID) {
       destChannel = await interaction.client.channels.fetch(SELLER_APPLY_CHANNEL_ID).catch(() => null);
     }
     if (!destChannel) {
-      // Fallback: use the channel where the command was invoked (if it's a guild text channel)
       const ch = await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
       if (ch && (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement)) {
         destChannel = ch;
       }
     }
-
     if (destChannel) {
       await destChannel.send({ embeds: [e] });
     }
@@ -93,5 +100,6 @@ export async function handleModalSubmit(interaction) {
     console.error('Post application failed:', err);
   }
 
-  return interaction.reply({ content: '✅ Thanks! Your application was submitted. Staff will review it shortly.', ephemeral: true });
+  // Use flags (64) for ephemeral response (avoids deprecation warning)
+  return interaction.reply({ content: '✅ Thanks! Your application was submitted. Staff will review it shortly.', flags: 64 });
 }
