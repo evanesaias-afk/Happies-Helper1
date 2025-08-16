@@ -1,24 +1,39 @@
-// config.js — central place for IDs, role IDs, and media links
+// config.js — central place for all bot configuration
+
+/* =========================== ENV VARS =========================== */
+// safely pull from process.env
+export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+export const CLIENT_ID     = process.env.CLIENT_ID;
+export const GUILD_ID      = process.env.GUILD_ID;
+
+// helper: throw if something is missing
+export function requireEnv(name) {
+  const val = process.env[name];
+  if (!val) {
+    throw new Error(`❌ Missing required env var: ${name}`);
+  }
+  return val;
+}
 
 /* =========================== CHANNELS =========================== */
-export const REVIEW_CHANNEL_ID       = "1396645204177457274";   // review channel
-export const SCAMMER_CHANNEL_ID      = "1396645074355486913";   // scammer reports
-export const SELLER_APPLY_CHANNEL_ID = "1396594120499400807";   // seller applications
+export const REVIEW_CHANNEL_ID       = "1396645204177457274";
+export const SCAMMER_CHANNEL_ID      = "1396645074355486913";
+export const SELLER_APPLY_CHANNEL_ID = "1396594120499400807";
 
 /* =========================== ROLES =========================== */
-export const SCAMMER_ROLE_ID   = "1404359573401370705"; // scammer role
-export const SELLER_ROLE_ID    = "1396594120499400807"; // seller role
-export const CLASSIC_ROLE_ID   = "1404316149486714991"; // classic customer
-export const VIP_ROLE_ID       = "1404377665766555689"; // vip
-export const DELUXE_ROLE_ID    = "1404316539057995878"; // deluxe
-export const PRESTIGE_ROLE_ID  = "1404316641805734021"; // prestige
-export const TITAN_ROLE_ID     = "1404316734998970378"; // titan
+export const SCAMMER_ROLE_ID   = "1404359573401370705";
+export const SELLER_ROLE_ID    = "1396594120499400807";
+export const CLASSIC_ROLE_ID   = "1404316149486714991";
+export const VIP_ROLE_ID       = "1404377665766555689";
+export const DELUXE_ROLE_ID    = "1404316539057995878";
+export const PRESTIGE_ROLE_ID  = "1404316641805734021";
+export const TITAN_ROLE_ID     = "1404316734998970378";
 
 /* =========================== COLORS =========================== */
-export const FT_BLUE = 0x5865F2; // Discord blurple-ish
+export const FT_BLUE = 0x5865F2;
 
 /* =========================== GIFs / MEDIA =========================== */
-// replace these with your actual gifs
+// replace with your actual gifs
 export const JOB_APP_GIF_URL   = "https://media.giphy.com/media/your-job-application.gif";
 export const SCAMMER_GIF_URL   = "https://media.giphy.com/media/perfect-scammer.gif";
 export const TAX_GIF_URL       = "https://media.giphy.com/media/tax-reminder.gif";
