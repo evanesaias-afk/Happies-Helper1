@@ -1,15 +1,29 @@
-import { Client, GatewayIntentBits, REST, Routes, Collection, ActivityType } from 'discord.js';
+// src/index.js — Applyseller Bot
+
+import { DISCORD_TOKEN, CLIENT_ID, GUILD_ID } from './config.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-import { DISCORD_TOKEN, CLIENT_ID, GUILD_ID, requireEnv } from './config.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  Collection,
+  REST,
+  Routes,
+} from 'discord.js';
 
-requireEnv();
-
+// resolve filename and dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// --- Load commands dynamically from ./commands
+// --- Initialize client ---
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds],
+  partials: [Partials.Channel],
+});
+
+// --- Load commands dynamically from ./commands ---
 const commands = new Collection();
 const commandJSON = [];
 const modalHandlers = new Map();
@@ -22,55 +36,56 @@ for (const file of fs.readdirSync(commandsDir)) {
     commands.set(mod.data.name, mod);
     commandJSON.push(mod.data.toJSON());
   }
-  if (mod?.modalId && typeof mod?.handleModalSubmit === 'function') {
+  if (mod?.modalId && typeof mod.handleModalSubmit === 'function') {
     modalHandlers.set(mod.modalId, mod.handleModalSubmit);
   }
 }
 
-// --- Register slash commands (guild-scoped for fast updates)
+// --- Register slash commands (guild-scoped for fast updates) ---
 const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+
 async function registerCommands() {
-  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commandJSON });
-  console.log(`✅ Registered ${commandJSON.length} command(s) for guild ${GUILD_ID}.`);
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commandJSON }
+    );
+    console.log('✅ Successfully registered slash commands.');
+  } catch (err) {
+    console.error('❌ Failed to register commands:', err);
+  }
 }
 
-// --- Client
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-
-client.once('ready', async () => {
+// --- Client Ready ---
+client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
-  client.user.setPresence({
-    activities: [{ name: '/applyseller', type: ActivityType.Listening }],
-    status: 'online',
-  });
-  try { await registerCommands(); } catch (e) { console.error('Register error:', e); }
+  registerCommands();
 });
 
+// --- Handle interactions ---
 client.on('interactionCreate', async (interaction) => {
-  try {
-    // Modal submit routing
-    if (interaction.isModalSubmit()) {
-      const handler = modalHandlers.get(interaction.customId);
-      if (handler) return handler(interaction);
-      return;
+  if (interaction.isChatInputCommand()) {
+    const command = commands.get(interaction.commandName);
+    if (!command) return;
+    try {
+      await command.execute(interaction);
+    } catch (err) {
+      console.error(err);
+      await interaction.reply({ content: '❌ Error executing command.', ephemeral: true });
     }
+  }
 
-    if (!interaction.isChatInputCommand()) return;
-    const cmd = commands.get(interaction.commandName);
-    if (!cmd) return interaction.reply({ content: '❔ Command not found.', flags: 64 });
-    await cmd.execute(interaction);
-  } catch (err) {
-    console.error('Interaction error:', err);
-    const msg = '❌ Something went wrong.';
-    if (interaction.deferred || interaction.replied) {
-      try { await interaction.editReply({ content: msg }); } catch {}
-    } else {
-      try { await interaction.reply({ content: msg, flags: 64 }); } catch {}
+  if (interaction.isModalSubmit()) {
+    const handler = modalHandlers.get(interaction.customId);
+    if (!handler) return;
+    try {
+      await handler(interaction);
+    } catch (err) {
+      console.error(err);
+      await interaction.reply({ content: '❌ Error handling modal.', ephemeral: true });
     }
   }
 });
 
-client.login(DISCORD_TOKEN).catch(err => {
-  console.error('Login failed:', err);
-  process.exit(1);
-});
+// --- Log in ---
+client.login(DISCORD_TOKEN);
