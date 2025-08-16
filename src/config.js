@@ -1,12 +1,7 @@
-// config.js — central place for all bot configuration
+// src/config.js — central config file
 
 /* =========================== ENV VARS =========================== */
-// safely pull from process.env
-export const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-export const CLIENT_ID     = process.env.CLIENT_ID;
-export const GUILD_ID      = process.env.GUILD_ID;
-
-// helper: throw if something is missing
+// helper: throw if env var is missing
 export function requireEnv(name) {
   const val = process.env[name];
   if (!val) {
@@ -14,6 +9,11 @@ export function requireEnv(name) {
   }
   return val;
 }
+
+// export required env vars (these MUST be set in Render > Environment)
+export const DISCORD_TOKEN = requireEnv("DISCORD_TOKEN");
+export const CLIENT_ID     = requireEnv("CLIENT_ID");
+export const GUILD_ID      = requireEnv("GUILD_ID");
 
 /* =========================== CHANNELS =========================== */
 export const REVIEW_CHANNEL_ID       = "1396645204177457274";
@@ -33,7 +33,7 @@ export const TITAN_ROLE_ID     = "1404316734998970378";
 export const FT_BLUE = 0x5865F2;
 
 /* =========================== GIFs / MEDIA =========================== */
-// replace with your actual gifs
+// replace with your actual gif links
 export const JOB_APP_GIF_URL   = "https://media.giphy.com/media/your-job-application.gif";
 export const SCAMMER_GIF_URL   = "https://media.giphy.com/media/perfect-scammer.gif";
 export const TAX_GIF_URL       = "https://media.giphy.com/media/tax-reminder.gif";
